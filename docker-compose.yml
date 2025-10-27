@@ -1,0 +1,192 @@
+services:
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "8090:8080"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - nginx_logs:/var/log/nginx
+    depends_on:
+      - api_1
+      - api_2
+      - api_3
+    networks:
+      - energy-network
+    restart: unless-stopped
+
+  api_1:
+    build: .
+    entrypoint: ["/app/scripts/entrypoint.sh"]
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2
+    container_name: energy_api_1
+    volumes:
+      - .:/app
+    environment:
+      - DATABASE_URL=postgresql://energy_user:energy_pass@postgres:5432/energy_db
+      - REDIS_URL=redis://redis:6379/0
+      - INFLUXDB_URL=http://influxdb:8086
+      - INFLUXDB_TOKEN=your-influxdb-token
+      - INFLUXDB_ORG=energy-org
+      - INFLUXDB_BUCKET=energy-metrics
+      - INSTANCE_ID=api_1
+    depends_on:
+      - postgres
+      - redis
+      - influxdb
+    networks:
+      - energy-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  api_2:
+    build: .
+    entrypoint: ["/app/scripts/entrypoint.sh"]
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2
+    container_name: energy_api_2
+    volumes:
+      - .:/app
+    environment:
+      - DATABASE_URL=postgresql://energy_user:energy_pass@postgres:5432/energy_db
+      - REDIS_URL=redis://redis:6379/0
+      - INFLUXDB_URL=http://influxdb:8086
+      - INFLUXDB_TOKEN=your-influxdb-token
+      - INFLUXDB_ORG=energy-org
+      - INFLUXDB_BUCKET=energy-metrics
+      - INSTANCE_ID=api_2
+    depends_on:
+      - postgres
+      - redis
+      - influxdb
+    networks:
+      - energy-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  api_3:
+    build: .
+    entrypoint: ["/app/scripts/entrypoint.sh"]
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1
+    container_name: energy_api_3
+    volumes:
+      - .:/app
+    environment:
+      - DATABASE_URL=postgresql://energy_user:energy_pass@postgres:5432/energy_db
+      - REDIS_URL=redis://redis:6379/0
+      - INFLUXDB_URL=http://influxdb:8086
+      - INFLUXDB_TOKEN=your-influxdb-token
+      - INFLUXDB_ORG=energy-org
+      - INFLUXDB_BUCKET=energy-metrics
+      - INSTANCE_ID=api_3
+    depends_on:
+      - postgres
+      - redis
+      - influxdb
+    networks:
+      - energy-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  worker:
+    build: .
+    command: celery -A config.celery worker --loglevel=info --concurrency=4
+    volumes:
+      - .:/app
+    environment:
+      - DATABASE_URL=postgresql://energy_user:energy_pass@postgres:5432/energy_db
+      - REDIS_URL=redis://redis:6379/0
+      - INFLUXDB_URL=http://influxdb:8086
+      - INFLUXDB_TOKEN=your-influxdb-token
+      - INFLUXDB_ORG=energy-org
+      - INFLUXDB_BUCKET=energy-metrics
+    depends_on:
+      - postgres
+      - redis
+      - influxdb
+    networks:
+      - energy-network
+    deploy:
+      replicas: 3
+    restart: unless-stopped
+
+  beat:
+    build: .
+    command: celery -A config.celery beat --loglevel=info
+    volumes:
+      - .:/app
+    environment:
+      - DATABASE_URL=postgresql://energy_user:energy_pass@postgres:5432/energy_db
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - energy-network
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=energy_db
+      - POSTGRES_USER=energy_user
+      - POSTGRES_PASSWORD=energy_pass
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - energy-network
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - energy-network
+    restart: unless-stopped
+
+  influxdb:
+    image: influxdb:2.7-alpine
+    environment:
+      - INFLUXDB_DB=energy_metrics
+      - INFLUXDB_ADMIN_USER=admin
+      - INFLUXDB_ADMIN_PASSWORD=admin_pass
+      - INFLUXDB_USER=energy_user
+      - INFLUXDB_USER_PASSWORD=energy_pass
+    volumes:
+      - influxdb_data:/var/lib/influxdb2
+    ports:
+      - "8086:8086"
+    networks:
+      - energy-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  influxdb_data:
+  nginx_logs:
+
+networks:
+  energy-network:
+    driver: bridge
