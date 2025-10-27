@@ -13,7 +13,7 @@ This project is a backend system for ingesting, processing, and monitoring smart
 - Load Balancer: Nginx for distributing API requests
 - Monitoring: Grafana for dashboards and visualizations
 - Containerization: Docker / Docker Compose
-- Autoscaling: Docker Swarm or Kubernetes
+- Autoscaling: Docker Swarm 
 
 ## Features
 - Stateless API for easy horizontal scaling
