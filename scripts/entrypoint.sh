@@ -13,14 +13,14 @@ user = 'energy_user'
 password = 'energy_pass'
 database = 'energy_db'
 
-for i in range(30):
+for i in range(15):
     try:
         conn = psycopg2.connect(host=host, user=user, password=password, database=database)
         conn.close()
         print('Database is ready!')
         break
     except psycopg2.OperationalError:
-        print(f'Database not ready, waiting... ({i+1}/30)')
+        print(f'Database not ready, waiting... ({i+1}/15)')
         time.sleep(2)
 else:
     print('Database failed to become ready')
