@@ -35,3 +35,16 @@ The system uses the Smart Home Energy Consumption Dataset:
 3. Workers process data asynchronously and store in PostgreSQL and InfluxDB
 4. Latest readings are cached in Redis
 5. API endpoints allow querying raw and aggregated data
+
+## Testing
+In 2 different terminals run the following commands from the project root:
+Terminal 1:
+```
+docker compose build
+docker compose up
+```
+
+Terminal 2:
+```
+locust -f locustfile.py --headless --users 50 --spawn-rate 10 --host http://localhost
+```

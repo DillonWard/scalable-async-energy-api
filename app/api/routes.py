@@ -417,41 +417,6 @@ async def get_database_stats():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/data/", response_model=DataIngestionResponse)
-async def ingest_energy_data(
-    reading: EnergyReading,
-    background_tasks: BackgroundTasks
-):
-    try:
-        task = process_energy_reading.delay(reading.dict())
-        
-        return DataIngestionResponse(
-            status="accepted",
-            message="Energy reading queued for processing",
-            task_id=task.id
-        )
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to queue reading: {str(e)}")
-
-@router.post("/data/batch/", response_model=DataIngestionResponse)
-async def ingest_batch_energy_data(
-    batch: BatchEnergyReadings,
-    background_tasks: BackgroundTasks
-):
-    try:
-        readings_data = [reading.dict() for reading in batch.readings]
-        task = batch_process_readings.delay(readings_data)
-        
-        return DataIngestionResponse(
-            status="accepted",
-            message="Batch readings queued for processing",
-            task_id=task.id,
-            count=len(batch.readings)
-        )
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to queue batch: {str(e)}")
 
 @router.get("/health")
 async def health_check():
